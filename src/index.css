@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply text-gray-900;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in-out {
+    animation: fadeInOut 3s ease-in-out;
+  }
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Print styles for CV download */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  #root > * > main > div:last-child > div,
+  #root > * > main > div:last-child > div * {
+    visibility: visible;
+  }
+  
+  #root > * > main > div:last-child > div {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+  
+  .shadow-sm, .shadow-md, .shadow-lg {
+    box-shadow: none !important;
+  }
+  
+  .border {
+    border: none !important;
+  }
+  
+  @page {
+    size: A4;
+    margin: 1cm;
+  }
+}
+
+/* PDF Export Styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+
+  .avoid-break {
+    page-break-inside: avoid;
+  }
+
+  /* Ensure proper font rendering in PDF */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Ensure background colors are preserved */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Ensure links are preserved */
+  a {
+    text-decoration: underline;
+    color: #2563eb !important;
+  }
+}
