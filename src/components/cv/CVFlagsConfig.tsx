@@ -29,6 +29,16 @@ const CVFlagsConfig: React.FC<CVFlagsConfigProps> = ({ flags, onChange }) => {
             <label className="flex items-center">
               <input
                 type="checkbox"
+                checked={flags.showMiddleName}
+                onChange={() => handleToggle('showMiddleName')}
+                className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+              />
+              <span className="ml-2 text-sm text-gray-600">Show Middle Name</span>
+            </label>
+
+            <label className="flex items-center">
+              <input
+                type="checkbox"
                 checked={flags.showEmail}
                 onChange={() => handleToggle('showEmail')}
                 className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
@@ -73,7 +83,7 @@ const CVFlagsConfig: React.FC<CVFlagsConfigProps> = ({ flags, onChange }) => {
                 onChange={() => handleToggle('showNationality')}
                 className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
               />
-              <span className="ml-2 text-sm text-gray-600">Show Nationality</span>
+              <span className="ml-2 text-sm text-gray-600">Show Country</span>
             </label>
 
             <label className="flex items-center">

@@ -51,14 +51,8 @@
     size: A4;
     margin: 1cm;
   }
-}
 
-/* PDF Export Styles */
-@media print {
-  .no-print {
-    display: none !important;
-  }
-
+  /* Page break controls */
   .page-break {
     page-break-before: always;
   }

@@ -1,0 +1,9 @@
+export { loadCVs } from './cvs';
+export { loadWorkExperience } from './work-experience';
+export { loadEducation } from './education';
+export { loadCertifications } from './certifications';
+export { loadTrainings } from './trainings';
+export { loadLanguages } from './languages';
+export { loadAwards } from './awards';
+export { loadTestimonials } from './testimonials';
+export { loadPersonality } from './personality';

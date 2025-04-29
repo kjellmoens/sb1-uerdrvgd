@@ -4,7 +4,7 @@ import Input from '../ui/Input';
 import TextArea from '../ui/TextArea';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
-import { Calendar, Trash2, Plus, ExternalLink, Code, Building, MapPin } from 'lucide-react';
+import { Calendar, Trash2, Plus, ExternalLink, Code, Building, MapPin, Flag } from 'lucide-react';
 import { generateId } from '../../utils/helpers';
 
 interface ProjectsFormProps {
@@ -13,16 +13,20 @@ interface ProjectsFormProps {
 }
 
 const emptyProject: Omit<Project, 'id'> = {
-  title: '',
-  description: '',
+  name: '',
+  role: '',
   startDate: '',
   endDate: '',
   current: false,
+  description: '',
   company: '',
   location: '',
-  technicalSkills: [],
-  nonTechnicalSkills: [],
-  link: ''
+  country: '',
+  link: '',
+  technicalSkills: [''],
+  nonTechnicalSkills: [''],
+  responsibilities: [''],
+  achievements: ['']
 };
 
 const ProjectsForm: React.FC<ProjectsFormProps> = ({ projects, onSave }) => {
@@ -40,7 +44,7 @@ const ProjectsForm: React.FC<ProjectsFormProps> = ({ projects, onSave }) => {
     );
   };
 
-  const handleSkillsChange = (index: number, type: 'technicalSkills' | 'nonTechnicalSkills', skillIndex: number, value: string) => {
+  const handleSkillsChange = (index: number, type: 'technicalSkills' | 'nonTechnicalSkills' | 'responsibilities' | 'achievements', skillIndex: number, value: string) => {
     setUserProjects(prev => 
       prev.map((project, i) => {
         if (i !== index) return project;
@@ -56,7 +60,7 @@ const ProjectsForm: React.FC<ProjectsFormProps> = ({ projects, onSave }) => {
     );
   };
 
-  const addSkill = (index: number, type: 'technicalSkills' | 'nonTechnicalSkills') => {
+  const addSkill = (index: number, type: 'technicalSkills' | 'nonTechnicalSkills' | 'responsibilities' | 'achievements') => {
     setUserProjects(prev => 
       prev.map((project, i) => 
         i === index 
@@ -66,7 +70,7 @@ const ProjectsForm: React.FC<ProjectsFormProps> = ({ projects, onSave }) => {
     );
   };
 
-  const removeSkill = (index: number, type: 'technicalSkills' | 'nonTechnicalSkills', skillIndex: number) => {
+  const removeSkill = (index: number, type: 'technicalSkills' | 'nonTechnicalSkills' | 'responsibilities' | 'achievements', skillIndex: number) => {
     setUserProjects(prev => 
       prev.map((project, i) => {
         if (i !== index) return project;
@@ -83,7 +87,7 @@ const ProjectsForm: React.FC<ProjectsFormProps> = ({ projects, onSave }) => {
   const addProject = () => {
     setUserProjects(prev => [
       ...prev,
-      { ...emptyProject, id: generateId(), technicalSkills: [''], nonTechnicalSkills: [''] }
+      { ...emptyProject, id: generateId(), technicalSkills: [''], nonTechnicalSkills: [''], responsibilities: [''], achievements: [''] }
     ]);
   };
 
@@ -136,38 +140,56 @@ const ProjectsForm: React.FC<ProjectsFormProps> = ({ projects, onSave }) => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                label="Project Title"
-                name={`title-${index}`}
-                value={project.title}
-                onChange={(e) => handleChange(index, 'title', e.target.value)}
+                label="Project Name"
+                name={`name-${index}`}
+                value={project.name}
+                onChange={(e) => handleChange(index, 'name', e.target.value)}
                 placeholder="My Awesome Project"
                 required
                 className="md:col-span-2"
               />
-              
+
               <div className="flex items-center">
                 <Building className="text-gray-400 mr-2" size={18} />
                 <Input
                   label="Company"
                   name={`company-${index}`}
-                  value={project.company}
+                  value={project.company || ''}
                   onChange={(e) => handleChange(index, 'company', e.target.value)}
                   placeholder="Company Name"
-                  required
                 />
               </div>
-              
+
               <div className="flex items-center">
                 <MapPin className="text-gray-400 mr-2" size={18} />
                 <Input
                   label="Location"
                   name={`location-${index}`}
-                  value={project.location}
+                  value={project.location || ''}
                   onChange={(e) => handleChange(index, 'location', e.target.value)}
-                  placeholder="City, Country"
-                  required
+                  placeholder="City, State"
                 />
               </div>
+
+              <div className="flex items-center">
+                <Flag className="text-gray-400 mr-2" size={18} />
+                <Input
+                  label="Country"
+                  name={`country-${index}`}
+                  value={project.country || ''}
+                  onChange={(e) => handleChange(index, 'country', e.target.value)}
+                  placeholder="United States"
+                />
+              </div>
+
+              <Input
+                label="Role"
+                name={`role-${index}`}
+                value={project.role}
+                onChange={(e) => handleChange(index, 'role', e.target.value)}
+                placeholder="Project Role"
+                required
+              />
               
               <div className="flex items-center">
                 <Calendar className="text-gray-400 mr-2" size={18} />
@@ -232,6 +254,98 @@ const ProjectsForm: React.FC<ProjectsFormProps> = ({ projects, onSave }) => {
                 rows={4}
                 required
               />
+            </div>
+
+            <div className="mt-4">
+              <div className="flex items-center mb-2">
+                <Code size={18} className="text-gray-500 mr-2" />
+                <label className="block text-sm font-medium text-gray-700">
+                  Responsibilities
+                </label>
+              </div>
+              
+              {project.responsibilities.map((responsibility, skillIndex) => (
+                <div key={skillIndex} className="flex items-center mb-2">
+                  <input
+                    type="text"
+                    value={responsibility}
+                    onChange={(e) => handleSkillsChange(index, 'responsibilities', skillIndex, e.target.value)}
+                    placeholder="Add a responsibility"
+                    className="flex-grow px-3 py-2 border border-gray-300 rounded-lg mr-2"
+                    required={skillIndex === 0}
+                  />
+                  
+                  <button
+                    type="button"
+                    onClick={() => removeSkill(index, 'responsibilities', skillIndex)}
+                    disabled={project.responsibilities.length <= 1 && skillIndex === 0}
+                    className={`p-2 rounded-lg ${
+                      project.responsibilities.length <= 1 && skillIndex === 0
+                        ? 'text-gray-300 cursor-not-allowed'
+                        : 'text-red-500 hover:bg-red-50'
+                    }`}
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+              
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => addSkill(index, 'responsibilities')}
+                icon={<Plus size={16} />}
+                className="mt-2"
+              >
+                Add Responsibility
+              </Button>
+            </div>
+
+            <div className="mt-4">
+              <div className="flex items-center mb-2">
+                <Code size={18} className="text-gray-500 mr-2" />
+                <label className="block text-sm font-medium text-gray-700">
+                  Achievements
+                </label>
+              </div>
+              
+              {project.achievements.map((achievement, skillIndex) => (
+                <div key={skillIndex} className="flex items-center mb-2">
+                  <input
+                    type="text"
+                    value={achievement}
+                    onChange={(e) => handleSkillsChange(index, 'achievements', skillIndex, e.target.value)}
+                    placeholder="Add an achievement"
+                    className="flex-grow px-3 py-2 border border-gray-300 rounded-lg mr-2"
+                    required={skillIndex === 0}
+                  />
+                  
+                  <button
+                    type="button"
+                    onClick={() => removeSkill(index, 'achievements', skillIndex)}
+                    disabled={project.achievements.length <= 1 && skillIndex === 0}
+                    className={`p-2 rounded-lg ${
+                      project.achievements.length <= 1 && skillIndex === 0
+                        ? 'text-gray-300 cursor-not-allowed'
+                        : 'text-red-500 hover:bg-red-50'
+                    }`}
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+              
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => addSkill(index, 'achievements')}
+                icon={<Plus size={16} />}
+                className="mt-2"
+              >
+                Add Achievement
+              </Button>
             </div>
             
             <div className="mt-4">

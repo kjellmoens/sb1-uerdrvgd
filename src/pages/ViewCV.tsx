@@ -21,12 +21,14 @@ const ViewCV: React.FC = () => {
     showProjectDescription: true,
     showEducationDescription: true,
     showWorkDescription: true,
+    showCompanyDescription: true,
     showBirthdate: true,
     showNationality: true,
     showRelationshipStatus: true,
     showStreetAddress: false,
     showPhone: true,
-    showEmail: true
+    showEmail: true,
+    showMiddleName: false
   });
   
   const cv = getCV(id || '');

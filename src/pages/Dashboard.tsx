@@ -9,6 +9,7 @@ const Dashboard: React.FC = () => {
   const { cvs, createCV, deleteCV, loading, error, refreshCVs } = useCV();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     refreshCVs();
@@ -25,9 +26,11 @@ const Dashboard: React.FC = () => {
 
   const handleDeleteCV = async (id: string) => {
     try {
+      setDeleteError(null);
       await deleteCV(id);
     } catch (error) {
       console.error('Error deleting CV:', error);
+      setDeleteError(error instanceof Error ? error.message : 'Failed to delete CV');
     }
   };
 
@@ -42,23 +45,6 @@ const Dashboard: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader className="w-8 h-8 animate-spin text-blue-500" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-          <p>Error loading CVs: {error}</p>
-          <Button 
-            variant="outline" 
-            onClick={() => refreshCVs()}
-            className="mt-2"
-          >
-            Try Again
-          </Button>
-        </div>
       </div>
     );
   }
@@ -79,6 +65,32 @@ const Dashboard: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 mb-6">
+          <p>Error loading CVs: {error}</p>
+          <Button 
+            variant="outline" 
+            onClick={() => refreshCVs()}
+            className="mt-2"
+          >
+            Try Again
+          </Button>
+        </div>
+      )}
+
+      {deleteError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 mb-6">
+          <p>{deleteError}</p>
+          <Button 
+            variant="outline" 
+            onClick={() => setDeleteError(null)}
+            className="mt-2"
+          >
+            Dismiss
+          </Button>
+        </div>
+      )}
       
       {cvs.length > 0 && (
         <div className="mb-6">

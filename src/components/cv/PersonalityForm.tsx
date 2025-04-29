@@ -1,36 +1,65 @@
-import React, { useState } from 'react';
-import { PersonalityTest, PersonalityResult } from '../../types';
+import React, { useState, useEffect } from 'react';
 import Input from '../ui/Input';
 import TextArea from '../ui/TextArea';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
 import { Brain, Calendar, ExternalLink, Plus, Trash2 } from 'lucide-react';
 import { generateId } from '../../utils/helpers';
+import { api } from '../../lib/api';
+
+interface PersonalityTest {
+  id: string;
+  type: string;
+  completionDate: string;
+  provider?: string;
+  description?: string;
+  reportUrl?: string;
+  trait?: string;
+  score?: string;
+}
 
 interface PersonalityFormProps {
   personality: PersonalityTest[];
   onSave: (personality: PersonalityTest[]) => void;
+  cvId: string;
 }
-
-const emptyResult: Omit<PersonalityResult, 'id'> = {
-  trait: '',
-  score: '',
-  description: ''
-};
 
 const emptyTest: Omit<PersonalityTest, 'id'> = {
   type: '',
   completionDate: '',
-  results: [{ ...emptyResult, id: generateId() }],
   provider: '',
   description: '',
-  reportUrl: ''
+  reportUrl: '',
+  trait: '',
+  score: ''
 };
 
-const PersonalityForm: React.FC<PersonalityFormProps> = ({ personality, onSave }) => {
+const PersonalityForm: React.FC<PersonalityFormProps> = ({ personality, onSave, cvId }) => {
   const [tests, setTests] = useState<PersonalityTest[]>(
     personality.length ? personality : [{ ...emptyTest, id: generateId() }]
   );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadTests = async () => {
+      if (!cvId) {
+        setError('CV ID is not available');
+        return;
+      }
+
+      try {
+        setError(null);
+        const data = await api.personality.list(cvId);
+        setTests(data.length ? data : [{ ...emptyTest, id: generateId() }]);
+      } catch (error) {
+        console.error('Error loading personality tests:', error);
+        setError('Failed to load personality tests');
+      }
+    };
+
+    loadTests();
+  }, [cvId]);
 
   const handleChange = (testIndex: number, field: keyof PersonalityTest, value: string) => {
     setTests(prev => 
@@ -39,25 +68,6 @@ const PersonalityForm: React.FC<PersonalityFormProps> = ({ personality, onSave }
           ? { ...test, [field]: value } 
           : test
       )
-    );
-  };
-
-  const handleResultChange = (testIndex: number, resultIndex: number, field: keyof PersonalityResult, value: string) => {
-    setTests(prev => 
-      prev.map((test, i) => {
-        if (i !== testIndex) return test;
-        
-        const newResults = [...test.results];
-        newResults[resultIndex] = {
-          ...newResults[resultIndex],
-          [field]: value
-        };
-        
-        return {
-          ...test,
-          results: newResults
-        };
-      })
     );
   };
 
@@ -72,37 +82,34 @@ const PersonalityForm: React.FC<PersonalityFormProps> = ({ personality, onSave }
     setTests(prev => prev.filter((_, i) => i !== index));
   };
 
-  const addResult = (testIndex: number) => {
-    setTests(prev => 
-      prev.map((test, i) => {
-        if (i !== testIndex) return test;
-        
-        return {
-          ...test,
-          results: [...test.results, { ...emptyResult, id: generateId() }]
-        };
-      })
-    );
-  };
-
-  const removeResult = (testIndex: number, resultIndex: number) => {
-    setTests(prev => 
-      prev.map((test, i) => {
-        if (i !== testIndex) return test;
-        if (test.results.length <= 1) return test;
-        
-        return {
-          ...test,
-          results: test.results.filter((_, ri) => ri !== resultIndex)
-        };
-      })
-    );
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(tests);
+    if (!cvId) {
+      setError('CV ID is not available');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const savedTests = await api.personality.save(cvId, tests);
+      onSave(savedTests);
+    } catch (error) {
+      console.error('Error saving personality tests:', error);
+      setError('Failed to save personality tests');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (error) {
+    return (
+      <Card title="Personality Tests">
+        <div className="text-red-600 p-4">{error}</div>
+      </Card>
+    );
+  }
 
   return (
     <Card title="Personality Tests">
@@ -160,6 +167,22 @@ const PersonalityForm: React.FC<PersonalityFormProps> = ({ personality, onSave }
                 onChange={(e) => handleChange(testIndex, 'provider', e.target.value)}
                 placeholder="16Personalities, DiSC Profile, etc."
               />
+
+              <Input
+                label="Trait/Type Result"
+                name={`trait-${testIndex}`}
+                value={test.trait || ''}
+                onChange={(e) => handleChange(testIndex, 'trait', e.target.value)}
+                placeholder="e.g., INTJ, Type A, etc."
+              />
+
+              <Input
+                label="Score/Details"
+                name={`score-${testIndex}`}
+                value={test.score || ''}
+                onChange={(e) => handleChange(testIndex, 'score', e.target.value)}
+                placeholder="e.g., 85%, High Extraversion, etc."
+              />
               
               <div className="flex items-center md:col-span-2">
                 <ExternalLink className="text-gray-400 mr-2" size={18} />
@@ -184,72 +207,6 @@ const PersonalityForm: React.FC<PersonalityFormProps> = ({ personality, onSave }
                 />
               </div>
             </div>
-            
-            <div className="mt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-md font-medium text-gray-900">Test Results</h4>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => addResult(testIndex)}
-                  icon={<Plus size={16} />}
-                >
-                  Add Result
-                </Button>
-              </div>
-              
-              {test.results.map((result, resultIndex) => (
-                <div 
-                  key={result.id} 
-                  className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 pb-4 border-b border-gray-100 last:border-0"
-                >
-                  <Input
-                    label="Trait/Dimension"
-                    name={`trait-${testIndex}-${resultIndex}`}
-                    value={result.trait}
-                    onChange={(e) => handleResultChange(testIndex, resultIndex, 'trait', e.target.value)}
-                    placeholder="Extraversion, Thinking, etc."
-                    required
-                  />
-                  
-                  <div className="flex items-center gap-2">
-                    <div className="flex-grow">
-                      <Input
-                        label="Score/Result"
-                        name={`score-${testIndex}-${resultIndex}`}
-                        value={result.score}
-                        onChange={(e) => handleResultChange(testIndex, resultIndex, 'score', e.target.value)}
-                        placeholder="85%, INTJ, etc."
-                        required
-                      />
-                    </div>
-                    
-                    {test.results.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeResult(testIndex, resultIndex)}
-                        className="mt-6 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    )}
-                  </div>
-                  
-                  <div className="md:col-span-2">
-                    <TextArea
-                      label="Description"
-                      name={`description-${testIndex}-${resultIndex}`}
-                      value={result.description}
-                      onChange={(e) => handleResultChange(testIndex, resultIndex, 'description', e.target.value)}
-                      placeholder="Explain what this result means..."
-                      rows={2}
-                      required
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         ))}
         
@@ -263,8 +220,8 @@ const PersonalityForm: React.FC<PersonalityFormProps> = ({ personality, onSave }
             Add Another Test
           </Button>
           
-          <Button type="submit">
-            Save Personality Tests
+          <Button type="submit" disabled={loading}>
+            {loading ? 'Saving...' : 'Save Personality Tests'}
           </Button>
         </div>
       </form>

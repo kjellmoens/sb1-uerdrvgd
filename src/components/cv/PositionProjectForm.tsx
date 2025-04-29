@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { PositionProject, SkillScore } from '../../types';
+import { PositionProject, Company } from '../../types';
 import Input from '../ui/Input';
 import TextArea from '../ui/TextArea';
 import Button from '../ui/Button';
-import { Calendar, Trash2, Plus, ExternalLink, Code } from 'lucide-react';
+import CompanySelect from '../ui/CompanySelect';
+import { Calendar, Trash2, Plus, ExternalLink, Building, MapPin, Flag } from 'lucide-react';
 import { generateId } from '../../utils/helpers';
 
 interface PositionProjectFormProps {
-  project: PositionProject;
+  project?: PositionProject;
   onSave: (project: PositionProject) => void;
   onCancel: () => void;
 }
@@ -19,44 +20,22 @@ const emptyProject: Omit<PositionProject, 'id'> = {
   endDate: '',
   current: false,
   description: '',
+  company: '',
+  location: '',
+  country: '',
+  link: '',
   responsibilities: [''],
-  achievements: [''],
-  technicalSkills: [],
-  nonTechnicalSkills: []
+  achievements: []
 };
 
 const PositionProjectForm: React.FC<PositionProjectFormProps> = ({ project = { ...emptyProject, id: generateId() }, onSave, onCancel }) => {
   const [formData, setFormData] = useState<PositionProject>(project);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
 
   const handleChange = (field: keyof PositionProject, value: string | boolean) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
-    }));
-  };
-
-  const handleSkillsChange = (type: 'technicalSkills' | 'nonTechnicalSkills', skillIndex: number, value: string) => {
-    setFormData(prev => {
-      const newSkills = [...prev[type]];
-      newSkills[skillIndex] = { name: value, score: 0 };
-      return {
-        ...prev,
-        [type]: newSkills
-      };
-    });
-  };
-
-  const addSkill = (type: 'technicalSkills' | 'nonTechnicalSkills') => {
-    setFormData(prev => ({
-      ...prev,
-      [type]: [...prev[type], { name: '', score: 0 }]
-    }));
-  };
-
-  const removeSkill = (type: 'technicalSkills' | 'nonTechnicalSkills', skillIndex: number) => {
-    setFormData(prev => ({
-      ...prev,
-      [type]: prev[type].filter((_, i) => i !== skillIndex)
     }));
   };
 
@@ -85,7 +64,7 @@ const PositionProjectForm: React.FC<PositionProjectFormProps> = ({ project = { .
   const removeListItem = (listType: 'responsibilities' | 'achievements', itemIndex: number) => {
     setFormData(prev => ({
       ...prev,
-      [listType]: prev[listType].filter((_, i) => i !== itemIndex)
+      [listType]: prev[listType].filter((_, index) => index !== itemIndex)
     }));
   };
 
@@ -99,7 +78,16 @@ const PositionProjectForm: React.FC<PositionProjectFormProps> = ({ project = { .
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+
+    // Update project data with selected company info
+    const updatedProject = {
+      ...formData,
+      company: selectedCompany?.name || '',
+      location: selectedCompany?.city || '',
+      country: selectedCompany?.country_code || ''
+    };
+
+    onSave(updatedProject);
   };
 
   return (
@@ -114,6 +102,14 @@ const PositionProjectForm: React.FC<PositionProjectFormProps> = ({ project = { .
           required
           className="md:col-span-2"
         />
+
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Company</label>
+          <CompanySelect
+            value={selectedCompany}
+            onChange={setSelectedCompany}
+          />
+        </div>
 
         <Input
           label="Your Role"
@@ -190,93 +186,21 @@ const PositionProjectForm: React.FC<PositionProjectFormProps> = ({ project = { .
       </div>
 
       <div>
-        <div className="flex items-center mb-2">
-          <Code size={18} className="text-gray-500 mr-2" />
+        <div className="flex items-center justify-between mb-2">
           <label className="block text-sm font-medium text-gray-700">
-            Technical Skills
+            Key Responsibilities (Optional)
           </label>
-        </div>
-
-        {formData.technicalSkills.map((skill, skillIndex) => (
-          <div key={skillIndex} className="flex items-center mb-2">
-            <input
-              type="text"
-              value={skill.name}
-              onChange={(e) => handleSkillsChange('technicalSkills', skillIndex, e.target.value)}
-              placeholder="Add a technical skill (e.g., React, Node.js, Python)"
-              className="flex-grow px-3 py-2 border border-gray-300 rounded-lg mr-2"
-              required
-            />
-
-            <button
+          {formData.responsibilities.length === 0 && (
+            <Button
               type="button"
-              onClick={() => removeSkill('technicalSkills', skillIndex)}
-              className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+              variant="outline"
+              size="sm"
+              onClick={() => addListItem('responsibilities')}
+              icon={<Plus size={16} />}
             >
-              <Trash2 size={18} />
-            </button>
-          </div>
-        ))}
-
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => addSkill('technicalSkills')}
-          icon={<Plus size={16} />}
-          className="mt-2"
-        >
-          Add Technical Skill
-        </Button>
-      </div>
-
-      <div>
-        <div className="flex items-center mb-2">
-          <Code size={18} className="text-gray-500 mr-2" />
-          <label className="block text-sm font-medium text-gray-700">
-            Non-Technical Skills
-          </label>
-        </div>
-
-        {formData.nonTechnicalSkills.map((skill, skillIndex) => (
-          <div key={skillIndex} className="flex items-center mb-2">
-            <input
-              type="text"
-              value={skill.name}
-              onChange={(e) => handleSkillsChange('nonTechnicalSkills', skillIndex, e.target.value)}
-              placeholder="Add a non-technical skill (e.g., Project Management, Team Leadership)"
-              className="flex-grow px-3 py-2 border border-gray-300 rounded-lg mr-2"
-              required
-            />
-
-            <button
-              type="button"
-              onClick={() => removeSkill('nonTechnicalSkills', skillIndex)}
-              className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
-            >
-              <Trash2 size={18} />
-            </button>
-          </div>
-        ))}
-
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => addSkill('nonTechnicalSkills')}
-          icon={<Plus size={16} />}
-          className="mt-2"
-        >
-          Add Non-Technical Skill
-        </Button>
-      </div>
-
-      <div>
-        <div className="flex items-center mb-2">
-          <Code size={18} className="text-gray-500 mr-2" />
-          <label className="block text-sm font-medium text-gray-700">
-            Key Responsibilities
-          </label>
+              Add Responsibilities
+            </Button>
+          )}
         </div>
 
         {formData.responsibilities.map((responsibility, index) => (
@@ -287,42 +211,48 @@ const PositionProjectForm: React.FC<PositionProjectFormProps> = ({ project = { .
               onChange={(e) => handleListChange('responsibilities', index, e.target.value)}
               placeholder="Describe a key responsibility"
               className="flex-grow px-3 py-2 border border-gray-300 rounded-lg mr-2"
-              required
             />
 
             <button
               type="button"
               onClick={() => removeListItem('responsibilities', index)}
-              disabled={formData.responsibilities.length <= 1}
-              className={`p-2 rounded-lg ${
-                formData.responsibilities.length <= 1
-                  ? 'text-gray-300 cursor-not-allowed'
-                  : 'text-red-500 hover:bg-red-50'
-              }`}
+              className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
             >
               <Trash2 size={18} />
             </button>
           </div>
         ))}
 
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => addListItem('responsibilities')}
-          icon={<Plus size={16} />}
-          className="mt-2"
-        >
-          Add Responsibility
-        </Button>
+        {formData.responsibilities.length > 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => addListItem('responsibilities')}
+            icon={<Plus size={16} />}
+            className="mt-2"
+          >
+            Add Responsibility
+          </Button>
+        )}
       </div>
 
       <div>
-        <div className="flex items-center mb-2">
-          <Code size={18} className="text-gray-500 mr-2" />
+        <div className="flex items-center justify-between mb-2">
           <label className="block text-sm font-medium text-gray-700">
-            Key Achievements
+            Key Achievements (Optional)
           </label>
+          {formData.achievements.length === 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => addListItem('achievements')}
+              icon={<Plus size={16} />}
+            >
+              Add Achievements
+            </Button>
+          )}
         </div>
 
         {formData.achievements.map((achievement, index) => (
@@ -333,34 +263,30 @@ const PositionProjectForm: React.FC<PositionProjectFormProps> = ({ project = { .
               onChange={(e) => handleListChange('achievements', index, e.target.value)}
               placeholder="Describe a key achievement"
               className="flex-grow px-3 py-2 border border-gray-300 rounded-lg mr-2"
-              required
             />
 
             <button
               type="button"
               onClick={() => removeListItem('achievements', index)}
-              disabled={formData.achievements.length <= 1}
-              className={`p-2 rounded-lg ${
-                formData.achievements.length <= 1
-                  ? 'text-gray-300 cursor-not-allowed'
-                  : 'text-red-500 hover:bg-red-50'
-              }`}
+              className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
             >
               <Trash2 size={18} />
             </button>
           </div>
         ))}
 
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => addListItem('achievements')}
-          icon={<Plus size={16} />}
-          className="mt-2"
-        >
-          Add Achievement
-        </Button>
+        {formData.achievements.length > 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => addListItem('achievements')}
+            icon={<Plus size={16} />}
+            className="mt-2"
+          >
+            Add Achievement
+          </Button>
+        )}
       </div>
 
       <div className="flex justify-end space-x-2">

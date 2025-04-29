@@ -1,5 +1,5 @@
-import React from 'react';
-import { countries } from '../../utils/countries';
+import React, { useEffect, useState } from 'react';
+import { Country, getCountries } from '../../utils/countries';
 
 interface CountrySelectProps {
   label?: string;
@@ -22,6 +22,24 @@ const CountrySelect: React.FC<CountrySelectProps> = ({
   error,
   className = '',
 }) => {
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadCountries = async () => {
+      try {
+        const data = await getCountries();
+        setCountries(data);
+      } catch (error) {
+        console.error('Error loading countries:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCountries();
+  }, []);
+
   return (
     <div className={`mb-4 ${className}`}>
       {label && (
@@ -39,15 +57,15 @@ const CountrySelect: React.FC<CountrySelectProps> = ({
         value={value}
         onChange={onChange}
         required={required}
-        disabled={disabled}
+        disabled={disabled || loading}
         className={`w-full px-3 py-2 border ${error ? 'border-red-500' : 'border-gray-300'} 
           rounded-lg shadow-sm focus:outline-none focus:ring-2 
           focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200
-          ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
+          ${disabled || loading ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
       >
         <option value="">Select country</option>
         {countries.map(country => (
-          <option key={country.code} value={country.name}>
+          <option key={country.code} value={country.code}>
             {country.name}
           </option>
         ))}

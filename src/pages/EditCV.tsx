@@ -5,7 +5,6 @@ import { useCV } from '../contexts/CVContext';
 import Button from '../components/ui/Button';
 import PersonalInfoForm from '../components/cv/PersonalInfoForm';
 import WorkExperienceForm from '../components/cv/WorkExperienceForm';
-import ProjectsForm from '../components/cv/ProjectsForm';
 import TrainingsForm from '../components/cv/TrainingsForm';
 import CertificationsForm from '../components/cv/CertificationsForm';
 import EducationForm from '../components/cv/EducationForm';
@@ -37,7 +36,6 @@ const EditCV: React.FC = () => {
     { id: 'personal', name: 'Personal Information' },
     { id: 'work', name: 'Work Experience' },
     { id: 'education', name: 'Education' },
-    { id: 'projects', name: 'Projects' },
     { id: 'skills', name: 'Skills' },
     { id: 'certifications', name: 'Certifications' },
     { id: 'awards', name: 'Awards' },
@@ -55,8 +53,6 @@ const EditCV: React.FC = () => {
         return cv.workExperience.length > 0 ? 'complete' : 'empty';
       case 'education':
         return cv.education.length > 0 ? 'complete' : 'empty';
-      case 'projects':
-        return cv.projects.length > 0 ? 'complete' : 'empty';
       case 'skills':
         return cv.skills?.length > 0 ? 'complete' : 'empty';
       case 'certifications':
@@ -85,12 +81,6 @@ const EditCV: React.FC = () => {
   const handleSaveWorkExperience = (data: typeof cv.workExperience) => {
     setSaving(true);
     updateCV(cv.id, { workExperience: data });
-    showSavedMessage();
-  };
-
-  const handleSaveProjects = (data: typeof cv.projects) => {
-    setSaving(true);
-    updateCV(cv.id, { projects: data });
     showSavedMessage();
   };
 
@@ -157,16 +147,14 @@ const EditCV: React.FC = () => {
         return <PersonalInfoForm initialData={cv.personalInfo} onSave={handleSavePersonalInfo} cvId={cv.id} />;
       case 'work':
         return <WorkExperienceForm experiences={cv.workExperience} onSave={handleSaveWorkExperience} cvId={cv.id} />;
-      case 'projects':
-        return <ProjectsForm projects={cv.projects} onSave={handleSaveProjects} />;
       case 'trainings':
         return <TrainingsForm trainings={cv.trainings} onSave={handleSaveTrainings} cvId={cv.id} />;
       case 'certifications':
         return <CertificationsForm certifications={cv.certifications} onSave={handleSaveCertifications} cvId={cv.id} />;
       case 'education':
-        return <EducationForm education={cv.education} onSave={handleSaveEducation} />;
+        return <EducationForm education={cv.education} onSave={handleSaveEducation} cvId={cv.id} />;
       case 'personality':
-        return <PersonalityForm personality={cv.personality || []} onSave={handleSavePersonality} />;
+        return <PersonalityForm personality={cv.personality || []} onSave={handleSavePersonality} cvId={cv.id} />;
       case 'languages':
         return <LanguagesForm languages={cv.languages || []} onSave={handleSaveLanguages} cvId={cv.id} />;
       case 'skills':

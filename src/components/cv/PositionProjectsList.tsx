@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PositionProject } from '../../types';
-import { Calendar, Plus, Edit, Trash2 } from 'lucide-react';
+import { Calendar, Plus, Edit, Trash2, Globe } from 'lucide-react';
 import Button from '../ui/Button';
 import { formatDate } from '../../utils/helpers';
 import PositionProjectForm from './PositionProjectForm';
@@ -106,33 +106,17 @@ const PositionProjectsList: React.FC<PositionProjectsListProps> = ({ projects, o
 
               <p className="mt-2 text-gray-700">{project.description}</p>
 
-              {project.technicalSkills.length > 0 && (
+              {project.link && (
                 <div className="mt-2">
-                  <div className="flex flex-wrap gap-1">
-                    {project.technicalSkills.map((skill, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                      >
-                        {skill.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {project.nonTechnicalSkills.length > 0 && (
-                <div className="mt-2">
-                  <div className="flex flex-wrap gap-1">
-                    {project.nonTechnicalSkills.map((skill, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                      >
-                        {skill.name}
-                      </span>
-                    ))}
-                  </div>
+                  <a 
+                    href={project.link} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-blue-600 hover:underline text-sm inline-flex items-center"
+                  >
+                    <Globe size={14} className="mr-1" />
+                    View Project
+                  </a>
                 </div>
               )}
             </div>

@@ -4,7 +4,9 @@ import Input from '../ui/Input';
 import TextArea from '../ui/TextArea';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
-import { Calendar, Trash2, Plus, GraduationCap } from 'lucide-react';
+import CompanySelect from '../ui/CompanySelect';
+import SkillSelect from '../ui/SkillSelect';
+import { Calendar, Trash2, Plus, GraduationCap, Code } from 'lucide-react';
 import { generateId } from '../../utils/helpers';
 import { api } from '../../lib/api';
 
@@ -16,9 +18,10 @@ interface TrainingsFormProps {
 
 const emptyTraining: Omit<Training, 'id'> = {
   title: '',
-  provider: '',
   completionDate: '',
-  description: ''
+  description: '',
+  company: undefined,
+  skills: []
 };
 
 const TrainingsForm: React.FC<TrainingsFormProps> = ({ trainings, onSave, cvId }) => {
@@ -58,6 +61,42 @@ const TrainingsForm: React.FC<TrainingsFormProps> = ({ trainings, onSave, cvId }
     );
   };
 
+  const handleCompanySelect = (index: number, company: Training['company']) => {
+    setUserTrainings(prev =>
+      prev.map((training, i) =>
+        i === index
+          ? { ...training, company }
+          : training
+      )
+    );
+  };
+
+  const handleSkillSelect = (index: number, skill: Training['skills'][0]) => {
+    setUserTrainings(prev =>
+      prev.map((training, i) =>
+        i === index
+          ? {
+              ...training,
+              skills: [...(training.skills || []), skill]
+            }
+          : training
+      )
+    );
+  };
+
+  const handleRemoveSkill = (trainingIndex: number, skillIndex: number) => {
+    setUserTrainings(prev =>
+      prev.map((training, i) =>
+        i === trainingIndex
+          ? {
+              ...training,
+              skills: training.skills?.filter((_, sIndex) => sIndex !== skillIndex) || []
+            }
+          : training
+      )
+    );
+  };
+
   const addTraining = () => {
     setUserTrainings(prev => [
       ...prev,
@@ -73,6 +112,18 @@ const TrainingsForm: React.FC<TrainingsFormProps> = ({ trainings, onSave, cvId }
     e.preventDefault();
     if (!cvId) {
       setError('CV ID is not available');
+      return;
+    }
+
+    // Validate all required fields
+    const invalidTrainings = userTrainings.filter(training => 
+      !training.title?.trim() ||
+      !training.completionDate?.trim() ||
+      !training.company
+    );
+
+    if (invalidTrainings.length > 0) {
+      setError('Please fill in all required fields for all trainings');
       return;
     }
 
@@ -133,15 +184,14 @@ const TrainingsForm: React.FC<TrainingsFormProps> = ({ trainings, onSave, cvId }
                 className="md:col-span-2"
               />
               
-              <div className="flex items-center">
-                <GraduationCap className="text-gray-400 mr-2" size={18} />
-                <Input
-                  label="Training Provider"
-                  name={`provider-${index}`}
-                  value={training.provider}
-                  onChange={(e) => handleChange(index, 'provider', e.target.value)}
-                  placeholder="Udemy, Coursera, Company Name, etc."
-                  required
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Training Provider
+                  <span className="text-red-500 ml-1">*</span>
+                </label>
+                <CompanySelect
+                  value={training.company}
+                  onChange={(company) => handleCompanySelect(index, company)}
                 />
               </div>
               
@@ -168,6 +218,38 @@ const TrainingsForm: React.FC<TrainingsFormProps> = ({ trainings, onSave, cvId }
                 rows={3}
                 required
               />
+            </div>
+
+            <div className="mt-4">
+              <div className="flex items-center mb-2">
+                <Code className="text-gray-400 mr-2" size={18} />
+                <label className="block text-sm font-medium text-gray-700">
+                  Related Skills
+                </label>
+              </div>
+              
+              <div className="space-y-2">
+                {training.skills?.map((skill, skillIndex) => (
+                  <div key={skill.id} className="flex items-center gap-2">
+                    <div className="flex-1 bg-gray-50 rounded-lg px-3 py-2">
+                      <div className="font-medium text-gray-900">{skill.name}</div>
+                      <div className="text-sm text-gray-500">{skill.domain} • {skill.subdomain}</div>
+                    </div>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => handleRemoveSkill(index, skillIndex)}
+                      icon={<Trash2 size={16} />}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+                
+                <SkillSelect
+                  onChange={(skill) => skill && handleSkillSelect(index, skill)}
+                />
+              </div>
             </div>
           </div>
         ))}

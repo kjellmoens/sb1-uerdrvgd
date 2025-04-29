@@ -8,202 +8,13 @@ import CountrySelect from '../ui/CountrySelect';
 import { User, Mail, Phone, MapPin, Globe, Linkedin, Github, Briefcase, Flag, Heart, Calendar, Home, Plus, Trash2, RefreshCw } from 'lucide-react';
 import { generateId } from '../../utils/helpers';
 import { api } from '../../lib/api';
+import { getCountries } from '../../utils/countries';
 
 interface PersonalInfoFormProps {
   initialData: PersonalInfo;
   onSave: (data: PersonalInfo) => void;
   cvId: string;
 }
-
-const nationalities = [
-  'Afghan',
-  'Albanian',
-  'Algerian',
-  'American',
-  'Andorran',
-  'Angolan',
-  'Antiguan',
-  'Argentine',
-  'Armenian',
-  'Australian',
-  'Austrian',
-  'Azerbaijani',
-  'Bahamian',
-  'Bahraini',
-  'Bangladeshi',
-  'Barbadian',
-  'Belarusian',
-  'Belgian',
-  'Belizean',
-  'Beninese',
-  'Bhutanese',
-  'Bolivian',
-  'Bosnian',
-  'Botswanan',
-  'Brazilian',
-  'British',
-  'Bruneian',
-  'Bulgarian',
-  'Burkinese',
-  'Burmese',
-  'Burundian',
-  'Cambodian',
-  'Cameroonian',
-  'Canadian',
-  'Cape Verdean',
-  'Central African',
-  'Chadian',
-  'Chilean',
-  'Chinese',
-  'Colombian',
-  'Comoran',
-  'Congolese',
-  'Costa Rican',
-  'Croatian',
-  'Cuban',
-  'Cypriot',
-  'Czech',
-  'Danish',
-  'Djiboutian',
-  'Dominican',
-  'Dutch',
-  'East Timorese',
-  'Ecuadorean',
-  'Egyptian',
-  'Emirian',
-  'Equatorial Guinean',
-  'Eritrean',
-  'Estonian',
-  'Ethiopian',
-  'Fijian',
-  'Filipino',
-  'Finnish',
-  'French',
-  'Gabonese',
-  'Gambian',
-  'Georgian',
-  'German',
-  'Ghanaian',
-  'Greek',
-  'Grenadian',
-  'Guatemalan',
-  'Guinean',
-  'Guyanese',
-  'Haitian',
-  'Honduran',
-  'Hungarian',
-  'Icelandic',
-  'Indian',
-  'Indonesian',
-  'Iranian',
-  'Iraqi',
-  'Irish',
-  'Israeli',
-  'Italian',
-  'Ivorian',
-  'Jamaican',
-  'Japanese',
-  'Jordanian',
-  'Kazakh',
-  'Kenyan',
-  'Kiribati',
-  'Korean',
-  'Kuwaiti',
-  'Kyrgyz',
-  'Laotian',
-  'Latvian',
-  'Lebanese',
-  'Lesothan',
-  'Liberian',
-  'Libyan',
-  'Liechtensteiner',
-  'Lithuanian',
-  'Luxembourger',
-  'Macedonian',
-  'Malagasy',
-  'Malawian',
-  'Malaysian',
-  'Maldivian',
-  'Malian',
-  'Maltese',
-  'Marshallese',
-  'Mauritanian',
-  'Mauritian',
-  'Mexican',
-  'Micronesian',
-  'Moldovan',
-  'Monacan',
-  'Mongolian',
-  'Montenegrin',
-  'Moroccan',
-  'Mozambican',
-  'Namibian',
-  'Nauruan',
-  'Nepalese',
-  'New Zealand',
-  'Nicaraguan',
-  'Nigerian',
-  'Nigerien',
-  'Norwegian',
-  'Omani',
-  'Pakistani',
-  'Palauan',
-  'Panamanian',
-  'Papua New Guinean',
-  'Paraguayan',
-  'Peruvian',
-  'Polish',
-  'Portuguese',
-  'Qatari',
-  'Romanian',
-  'Russian',
-  'Rwandan',
-  'Saint Lucian',
-  'Salvadoran',
-  'Samoan',
-  'San Marinese',
-  'Sao Tomean',
-  'Saudi',
-  'Senegalese',
-  'Serbian',
-  'Seychellois',
-  'Sierra Leonean',
-  'Singaporean',
-  'Slovak',
-  'Slovenian',
-  'Solomon Islander',
-  'Somali',
-  'South African',
-  'Spanish',
-  'Sri Lankan',
-  'Sudanese',
-  'Surinamer',
-  'Swazi',
-  'Swedish',
-  'Swiss',
-  'Syrian',
-  'Taiwanese',
-  'Tajik',
-  'Tanzanian',
-  'Thai',
-  'Togolese',
-  'Tongan',
-  'Trinidadian',
-  'Tunisian',
-  'Turkish',
-  'Turkmen',
-  'Tuvaluan',
-  'Ugandan',
-  'Ukrainian',
-  'Uruguayan',
-  'Uzbek',
-  'Vanuatuan',
-  'Venezuelan',
-  'Vietnamese',
-  'Yemeni',
-  'Zambian',
-  'Zimbabwean'
-].sort();
 
 const relationshipStatuses = [
   'Single',
@@ -223,6 +34,23 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ initialData, onSave
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [nationalities, setNationalities] = useState<Array<{ code: string; nationality: string }>>([]);
+
+  useEffect(() => {
+    const loadNationalities = async () => {
+      try {
+        const countries = await getCountries();
+        setNationalities(countries.map(country => ({
+          code: country.code,
+          nationality: country.nationality
+        })));
+      } catch (error) {
+        console.error('Error loading nationalities:', error);
+      }
+    };
+
+    loadNationalities();
+  }, []);
 
   const loadPersonalInfo = async () => {
     if (!cvId) {
@@ -439,15 +267,15 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ initialData, onSave
                 <span className="text-red-500 ml-1">*</span>
               </label>
               <select
-                name="nationality"
-                value={formData.nationality}
+                name="nationalityCode"
+                value={formData.nationalityCode}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               >
                 <option value="">Select nationality</option>
-                {nationalities.map(nationality => (
-                  <option key={nationality} value={nationality}>
+                {nationalities.map(({ code, nationality }) => (
+                  <option key={code} value={code}>
                     {nationality}
                   </option>
                 ))}
@@ -575,8 +403,8 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({ initialData, onSave
             <Flag className="text-gray-400 mr-2" size={18} />
             <CountrySelect
               label="Country"
-              name="country"
-              value={formData.country}
+              name="countryCode"
+              value={formData.countryCode}
               onChange={handleChange}
               required
             />

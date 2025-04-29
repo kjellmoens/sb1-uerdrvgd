@@ -22,7 +22,8 @@ import {
   Layers,
   Code,
   Trophy,
-  MessageSquare
+  MessageSquare,
+  FolderOpen
 } from 'lucide-react';
 
 interface CVPreviewProps {
@@ -32,19 +33,21 @@ interface CVPreviewProps {
 
 const defaultFlags: CVPreviewFlags = {
   showTrainingDescription: true,
-  showProjectDescription: true,
   showEducationDescription: true,
   showWorkDescription: true,
+  showCompanyDescription: true,
   showBirthdate: true,
   showNationality: true,
   showRelationshipStatus: true,
   showStreetAddress: true,
   showPhone: true,
-  showEmail: true
+  showEmail: true,
+  showProjectDescription: true,
+  showMiddleName: false
 };
 
 const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
-  const { personalInfo, workExperience, projects, trainings, certifications, education, personality, languages, awards, testimonials } = cv;
+  const { personalInfo, workExperience, education, trainings, certifications, personality, languages, awards, testimonials, projects } = cv;
   const previewFlags = { ...defaultFlags, ...flags };
 
   const formatAddress = () => {
@@ -59,7 +62,9 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
 
   const getFullName = () => {
     const parts = [personalInfo.firstName];
-    if (personalInfo.middleName) parts.push(personalInfo.middleName);
+    if (previewFlags.showMiddleName && personalInfo.middleName) {
+      parts.push(personalInfo.middleName);
+    }
     parts.push(personalInfo.lastName);
     return parts.filter(Boolean).join(' ');
   };
@@ -72,75 +77,19 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
     return Array.from(sectors);
   };
 
-  const getSkillsOverview = () => {
-    const skillsMap = new Map<string, { scores: number[]; category: string }>();
-
-    const processSkills = (skills: { name: string; score: number }[], category: string) => {
-      skills.forEach(skill => {
-        if (!skillsMap.has(skill.name)) {
-          skillsMap.set(skill.name, { scores: [skill.score], category });
-        } else {
-          skillsMap.get(skill.name)?.scores.push(skill.score);
-        }
-      });
-    };
-
-    workExperience.forEach(exp => {
-      exp.positions.forEach(pos => {
-        if (pos.skills) {
-          processSkills(pos.skills, 'General');
-        }
-        pos.projects.forEach(proj => {
-          if (proj.technicalSkills) {
-            processSkills(proj.technicalSkills, 'Technical');
-          }
-          if (proj.nonTechnicalSkills) {
-            processSkills(proj.nonTechnicalSkills, 'Non-Technical');
-          }
-        });
-      });
-    });
-
-    projects.forEach(project => {
-      if (project.technicalSkills) {
-        processSkills(project.technicalSkills, 'Technical');
-      }
-      if (project.nonTechnicalSkills) {
-        processSkills(project.nonTechnicalSkills, 'Non-Technical');
-      }
-    });
-
-    const categorizedSkills = new Map<string, { name: string; score: number }[]>();
-    
-    skillsMap.forEach((value, skillName) => {
-      const avgScore = value.scores.reduce((a, b) => a + b, 0) / value.scores.length;
-      const category = value.category;
-      
-      if (!categorizedSkills.has(category)) {
-        categorizedSkills.set(category, []);
-      }
-      categorizedSkills.get(category)?.push({
-        name: skillName,
-        score: Math.round(avgScore)
-      });
-    });
-
-    return categorizedSkills;
-  };
-
   const hasData = () => {
     return (
       personalInfo.firstName ||
       personalInfo.lastName ||
       workExperience.length > 0 ||
-      projects.length > 0 ||
+      education.length > 0 ||
       trainings.length > 0 ||
       certifications.length > 0 ||
-      education.length > 0 ||
       personality?.length > 0 ||
       languages?.length > 0 ||
       awards?.length > 0 ||
-      testimonials?.length > 0
+      testimonials?.length > 0 ||
+      projects?.length > 0
     );
   };
 
@@ -156,12 +105,11 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
   }
 
   const sectors = getSectors();
-  const skillsOverview = getSkillsOverview();
 
   return (
     <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-8 max-w-4xl mx-auto">
       {/* Header / Personal Info */}
-      <div className="border-b border-gray-200 pb-6 mb-6">
+      <div className="border-b border-gray-200 pb-6 mb-6 avoid-break">
         <h1 className="text-3xl font-bold text-gray-900">
           {getFullName()}
         </h1>
@@ -225,10 +173,10 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
             </div>
           )}
 
-          {previewFlags.showNationality && personalInfo.nationality && (
+          {previewFlags.showNationality && personalInfo.country && (
             <div className="flex items-center text-gray-700">
               <Flag size={16} className="mr-2 text-gray-500" />
-              <span>Nationality: {personalInfo.nationality}</span>
+              <span>Country: {personalInfo.country}</span>
             </div>
           )}
 
@@ -253,7 +201,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
 
       {/* Industry Sectors */}
       {sectors.length > 0 && (
-        <div className="mb-8">
+        <div className="mb-8 avoid-break">
           <div className="flex items-center mb-4">
             <Building size={18} className="mr-2 text-blue-600" />
             <h2 className="text-xl font-semibold text-gray-900">Industry Experience</h2>
@@ -271,43 +219,9 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
         </div>
       )}
 
-      {/* Skills Overview */}
-      {skillsOverview.size > 0 && (
-        <div className="mb-8">
-          <div className="flex items-center mb-4">
-            <Code size={18} className="mr-2 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Skills Overview</h2>
-          </div>
-          
-          {Array.from(skillsOverview.entries()).map(([category, skills]) => (
-            <div key={category} className="mb-6 last:mb-0">
-              <h3 className="text-lg font-medium text-gray-900 mb-3">{category}</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {skills
-                  .sort((a, b) => b.score - a.score)
-                  .map((skill, index) => (
-                    <div key={index} className="bg-gray-50 rounded-lg p-3">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium text-gray-900">{skill.name}</span>
-                        <span className="text-blue-600 font-medium">{skill.score}/100</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="h-2 rounded-full bg-blue-500"
-                          style={{ width: `${skill.score}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
       {/* Work Experience */}
       {workExperience.length > 0 && (
-        <div className="mb-8">
+        <div className="mb-8 page-break">
           <div className="flex items-center mb-4">
             <Briefcase size={18} className="mr-2 text-blue-600" />
             <h2 className="text-xl font-semibold text-gray-900">Work Experience</h2>
@@ -315,7 +229,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
           
           <div className="space-y-6">
             {workExperience.map((job) => (
-              <div key={job.id} className="border-l-2 border-gray-200 pl-4 ml-1 py-1">
+              <div key={job.id} className="border-l-2 border-gray-200 pl-4 ml-1 py-1 avoid-break">
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="text-lg font-medium text-gray-900">
@@ -348,7 +262,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
                 
                 <div className="mt-4 space-y-4">
                   {job.positions.map((position) => (
-                    <div key={position.id} className="border-l border-gray-200 pl-4">
+                    <div key={position.id} className="border-l border-gray-200 pl-4 avoid-break">
                       <div className="flex justify-between">
                         <h4 className="font-medium text-gray-900">{position.title}</h4>
                         <div className="flex items-center text-gray-600 text-sm">
@@ -395,7 +309,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
       
       {/* Education */}
       {education.length > 0 && (
-        <div className="mb-8">
+        <div className="mb-8 page-break">
           <div className="flex items-center mb-4">
             <GraduationCap size={18} className="mr-2 text-blue-600" />
             <h2 className="text-xl font-semibold text-gray-900">Education</h2>
@@ -403,7 +317,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
           
           <div className="space-y-6">
             {education.map((edu) => (
-              <div key={edu.id} className="border-l-2 border-gray-200 pl-4 ml-1 py-1">
+              <div key={edu.id} className="border-l-2 border-gray-200 pl-4 ml-1 py-1 avoid-break">
                 <div className="flex justify-between">
                   <h3 className="text-lg font-medium text-gray-900">{edu.degree} in {edu.fieldOfStudy}</h3>
                   <div className="flex items-center text-gray-600 text-sm">
@@ -426,63 +340,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
                 </div>
                 
                 {previewFlags.showEducationDescription && edu.description && (
-                  <p className="mt-2 text-gray-700">{edu.description}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {/* Projects */}
-      {projects.length > 0 && (
-        <div className="mb-8">
-          <div className="flex items-center mb-4">
-            <Briefcase size={18} className="mr-2 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Projects</h2>
-          </div>
-          
-          <div className="space-y-6">
-            {projects.map((project) => (
-              <div key={project.id} className="border-l-2 border-gray-200 pl-4 ml-1 py-1">
-                <div className="flex justify-between">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    {project.title}
-                    {project.link && (
-                      <a 
-                        href={project.link} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="ml-2 text-blue-600 hover:underline text-sm"
-                      >
-                        <Globe size={14} className="inline mb-1 mr-1" />
-                        View Project
-                      </a>
-                    )}
-                  </h3>
-                  <div className="flex items-center text-gray-600 text-sm">
-                    <Calendar size={14} className="mr-1" />
-                    <span>
-                      {formatDate(project.startDate)} - {project.current ? 'Present' : formatDate(project.endDate || '')}
-                    </span>
-                  </div>
-                </div>
-                
-                {previewFlags.showProjectDescription && project.description && (
-                  <p className="mt-2 text-gray-700">{project.description}</p>
-                )}
-                
-                {project.technicalSkills.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {project.technicalSkills.map((tech, index) => (
-                      <span 
-                        key={index} 
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                      >
-                        {tech.name}
-                      </span>
-                    ))}
-                  </div>
+                  <p className="mt-2 text-gray-700 whitespace-pre-line">{edu.description}</p>
                 )}
               </div>
             ))}
@@ -492,7 +350,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
       
       {/* Certifications */}
       {certifications.length > 0 && (
-        <div className="mb-8">
+        <div className="mb-8 page-break">
           <div className="flex items-center mb-4">
             <Award size={18} className="mr-2 text-blue-600" />
             <h2 className="text-xl font-semibold text-gray-900">Certifications</h2>
@@ -500,7 +358,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {certifications.map((cert) => (
-              <div key={cert.id} className="border rounded-lg p-3 border-gray-200">
+              <div key={cert.id} className="border rounded-lg p-3 border-gray-200 avoid-break">
                 <h3 className="font-medium text-gray-900">{cert.name}</h3>
                 <div className="text-gray-700 text-sm mt-1">{cert.issuingOrganization}</div>
                 <div className="flex items-center text-gray-600 text-sm mt-1">
@@ -538,7 +396,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
       
       {/* Trainings */}
       {trainings.length > 0 && (
-        <div className="mb-8">
+        <div className="mb-8 page-break">
           <div className="flex items-center mb-4">
             <GraduationCap size={18} className="mr-2 text-blue-600" />
             <h2 className="text-xl font-semibold text-gray-900">Training & Courses</h2>
@@ -546,7 +404,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {trainings.map((training) => (
-              <div key={training.id} className="border rounded-lg p-3 border-gray-200">
+              <div key={training.id} className="border rounded-lg p-3 border-gray-200 avoid-break">
                 <h3 className="font-medium text-gray-900">{training.title}</h3>
                 <div className="text-gray-700 text-sm mt-1">{training.provider}</div>
                 <div className="flex items-center text-gray-600 text-sm mt-1">
@@ -565,7 +423,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
       
       {/* Languages */}
       {languages && languages.length > 0 && (
-        <div className="mb-8">
+        <div className="mb-8 page-break">
           <div className="flex items-center mb-4">
             <LanguagesIcon size={18} className="mr-2 text-blue-600" />
             <h2 className="text-xl font-semibold text-gray-900">Languages</h2>
@@ -573,8 +431,8 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {languages.map((language) => (
-              <div key={language.id} className="border rounded-lg p-4 border-gray-200">
-                <div className="flex justify-between items-start">
+              <div key={language.id} className="border rounded-lg p-4 border-gray-200 avoid-break">
+                <div className="flex items-start justify-between">
                   <div>
                     <h3 className="font-medium text-gray-900">{language.name}</h3>
                     <div className="text-blue-600 font-medium mt-1">{language.proficiency}</div>
@@ -601,7 +459,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
                     <a 
                       href={language.certificateUrl} 
                       target="_blank" 
-                      rel="noopener noreferrer" 
+                      rel="noopener noreferrer"
                       className="text-blue-600 hover:underline text-sm inline-flex items-center"
                     >
                       <Globe size={14} className="mr-1" />
@@ -617,7 +475,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
       
       {/* Awards & Recognition */}
       {awards && awards.length > 0 && (
-        <div className="mb-8">
+        <div className="mb-8 page-break">
           <div className="flex items-center mb-4">
             <Trophy size={18} className="mr-2 text-blue-600" />
             <h2 className="text-xl font-semibold text-gray-900">Awards & Recognition</h2>
@@ -625,7 +483,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {awards.map((award) => (
-              <div key={award.id} className="border rounded-lg p-4 border-gray-200">
+              <div key={award.id} className="border rounded-lg p-4 border-gray-200 avoid-break">
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="font-medium text-gray-900">{award.title}</h3>
@@ -674,7 +532,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
       
       {/* Testimonials */}
       {testimonials && testimonials.length > 0 && (
-        <div className="mb-8">
+        <div className="mb-8 page-break">
           <div className="flex items-center mb-4">
             <MessageSquare size={18} className="mr-2 text-blue-600" />
             <h2 className="text-xl font-semibold text-gray-900">Testimonials</h2>
@@ -682,7 +540,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
           
           <div className="grid grid-cols-1 gap-4">
             {testimonials.map((testimonial) => (
-              <div key={testimonial.id} className="border rounded-lg p-6 border-gray-200">
+              <div key={testimonial.id} className="border rounded-lg p-6 border-gray-200 avoid-break">
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="font-medium text-gray-900">{testimonial.author}</h3>
@@ -715,7 +573,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
       
       {/* Personality Tests */}
       {personality && personality.length > 0 && (
-        <div>
+        <div className="page-break">
           <div className="flex items-center mb-4">
             <Brain size={18} className="mr-2 text-blue-600" />
             <h2 className="text-xl font-semibold text-gray-900">Personality Tests</h2>
@@ -723,7 +581,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
           
           <div className="space-y-6">
             {personality.map((test) => (
-              <div key={test.id} className="border rounded-lg p-4 border-gray-200">
+              <div key={test.id} className="border rounded-lg p-4 border-gray-200 avoid-break">
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="font-medium text-gray-900">{test.type}</h3>
@@ -737,21 +595,20 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
                   </div>
                 </div>
                 
+                {(test.trait || test.score) && (
+                  <div className="mt-2">
+                    {test.trait && (
+                      <div className="font-medium text-gray-900">{test.trait}</div>
+                    )}
+                    {test.score && (
+                      <div className="text-blue-600">{test.score}</div>
+                    )}
+                  </div>
+                )}
+                
                 {test.description && (
                   <p className="mt-2 text-gray-700">{test.description}</p>
                 )}
-                
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {test.results.map((result) => (
-                    <div key={result.id} className="bg-gray-50 rounded-lg p-3">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-gray-900">{result.trait}</span>
-                        <span className="text-blue-600 font-medium">{result.score}</span>
-                      </div>
-                      <p className="mt-1 text-sm text-gray-600">{result.description}</p>
-                    </div>
-                  ))}
-                </div>
                 
                 {test.reportUrl && (
                   <div className="mt-4">
@@ -763,6 +620,99 @@ const CVPreview: React.FC<CVPreviewProps> = ({ cv, flags = defaultFlags }) => {
                     >
                       <Globe size={14} className="mr-1" />
                       View Full Report
+                    </a>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Projects */}
+      {projects && projects.length > 0 && (
+        <div className="mb-8 page-break">
+          <div className="flex items-center mb-4">
+            <FolderOpen size={18} className="mr-2 text-blue-600" />
+            <h2 className="text-xl font-semibold text-gray-900">Projects</h2>
+          </div>
+          
+          <div className="space-y-4">
+            {projects.map(project => (
+              <div key={project.id} className="border rounded-lg p-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-medium text-gray-900">{project.name}</h3>
+                    {project.company && (
+                      <div className="flex items-center mt-1 text-gray-600 text-sm">
+                        <Building size={14} className="mr-1" />
+                        <span>{project.company}</span>
+                        {(project.location || project.country) && (
+                          <>
+                            <span className="mx-2">•</span>
+                            <MapPin size={14} className="mr-1" />
+                            <span>
+                              {project.location}
+                              {project.location && project.country && ', '}
+                              {project.country}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <Calendar size={14} className="mr-1" />
+                    <span>
+                      {formatDate(project.startDate)} - {project.current ? 'Present' : formatDate(project.endDate || '')}
+                    </span>
+                  </div>
+                </div>
+
+                {previewFlags.showProjectDescription && project.description && (
+                  <p className="mt-2 text-gray-700">{project.description}</p>
+                )}
+
+                {project.technicalSkills.length > 0 && (
+                  <div className="mt-2">
+                    <div className="flex flex-wrap gap-1">
+                      {project.technicalSkills.map((skill, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                        >
+                          {skill.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {project.nonTechnicalSkills.length > 0 && (
+                  <div className="mt-2">
+                    <div className="flex flex-wrap gap-1">
+                      {project.nonTechnicalSkills.map((skill, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                        >
+                          {skill.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {project.link && (
+                  <div className="mt-2">
+                    <a 
+                      href={project.link} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-blue-600 hover:underline text-sm inline-flex items-center"
+                    >
+                      <Globe size={14} className="mr-1" />
+                      View Project
                     </a>
                   </div>
                 )}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { FileText, Plus, Building, LogOut } from 'lucide-react';
+import { FileText, Plus, Building, PenTool as Tool, LogOut } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useCV } from '../../contexts/CVContext';
 import { supabase } from '../../lib/db';
@@ -47,6 +47,19 @@ const Header: React.FC = () => {
               }`}
             >
               Dashboard
+            </Link>
+            <Link
+              to="/skills"
+              className={`px-3 py-2 rounded-md text-sm font-medium ${
+                location.pathname === '/skills'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <span className="flex items-center">
+                <Tool size={16} className="mr-1" />
+                Skills
+              </span>
             </Link>
             <Link
               to="/companies"

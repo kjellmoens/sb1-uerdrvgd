@@ -4,68 +4,83 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import TextArea from '../components/ui/TextArea';
-import { Company } from '../types';
+import { Company, Country } from '../types';
 import { api } from '../lib/api';
+import { getCountries } from '../utils/countries';
 
 const emptyCompany: Omit<Company, 'id' | 'created_at' | 'updated_at'> = {
   name: '',
   description: '',
   industry: '',
   type: 'Private',
-  headquarters: {
-    city: '',
-    state: '',
-    country: ''
-  },
-  socialMedia: {
-    linkedin: '',
-    twitter: '',
-    facebook: ''
-  }
+  city: '',
+  website: '',
+  founded: '',
+  size: '',
+  country_code: ''
 };
 
 const Companies: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [countries, setCountries] = useState<Country[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [formData, setFormData] = useState<Omit<Company, 'id' | 'created_at' | 'updated_at'>>(emptyCompany);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [foundedError, setFoundedError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadCompanies = async () => {
+    const loadData = async () => {
       try {
-        const data = await api.companies.list();
-        setCompanies(data);
+        setLoading(true);
+        const [companiesData, countriesData] = await Promise.all([
+          api.companies.list(),
+          getCountries()
+        ]);
+        setCompanies(companiesData);
+        setCountries(countriesData);
       } catch (error) {
-        console.error('Error loading companies:', error);
+        console.error('Error loading data:', error);
+        setError('Failed to load data');
+      } finally {
+        setLoading(false);
       }
     };
 
-    loadCompanies();
+    loadData();
   }, []);
 
-  const handleChange = (field: keyof Company | 'city' | 'state' | 'country' | 'linkedin' | 'twitter' | 'facebook', value: string) => {
+  const validateFounded = (value: string): boolean => {
+    if (!value) return true; // Empty is valid, will be converted to null
+    const yearRegex = /^\d{4}$/;
+    if (!yearRegex.test(value)) return false;
+    
+    const year = parseInt(value, 10);
+    const currentYear = new Date().getFullYear();
+    return year >= 1800 && year <= currentYear;
+  };
+
+  const handleChange = (field: keyof Company | 'country', value: string) => {
+    if (field === 'founded') {
+      // Clear previous founded error when the field changes
+      setFoundedError(null);
+      
+      // Validate the year as the user types
+      if (value && !validateFounded(value)) {
+        setFoundedError('Please enter a valid year between 1800 and present');
+      }
+    }
+
     setFormData(prev => {
-      if (field === 'city' || field === 'state' || field === 'country') {
+      if (field === 'country') {
+        const country = countries.find(c => c.name === value);
         return {
           ...prev,
-          headquarters: {
-            ...prev.headquarters,
-            [field]: value
-          }
+          country_code: country?.code || ''
         };
       }
-      
-      if (field === 'linkedin' || field === 'twitter' || field === 'facebook') {
-        return {
-          ...prev,
-          socialMedia: {
-            ...prev.socialMedia,
-            [field]: value || null
-          }
-        };
-      }
-      
       return {
         ...prev,
         [field]: value
@@ -76,22 +91,41 @@ const Companies: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate founded year before submission
+    if (formData.founded && !validateFounded(formData.founded)) {
+      setFoundedError('Please enter a valid year between 1800 and present');
+      return;
+    }
+
     try {
+      setLoading(true);
+      setError(null);
+
+      // Create a copy of the form data to modify
+      const submissionData = {
+        ...formData,
+        // Convert empty founded string to null, otherwise keep the valid year
+        founded: formData.founded || null
+      };
+
       if (editingCompany) {
-        const updated = await api.companies.update(editingCompany.id, formData);
+        const updated = await api.companies.update(editingCompany.id, submissionData);
         setCompanies(prev => 
           prev.map(company => 
             company.id === editingCompany.id ? updated : company
           )
         );
       } else {
-        const created = await api.companies.create(formData);
+        const created = await api.companies.create(submissionData);
         setCompanies(prev => [...prev, created]);
       }
       
       resetForm();
     } catch (error) {
       console.error('Error saving company:', error);
+      setError('Failed to save company. Please check all fields are valid.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -99,6 +133,8 @@ const Companies: React.FC = () => {
     setFormData(emptyCompany);
     setEditingCompany(null);
     setIsAdding(false);
+    setError(null);
+    setFoundedError(null);
   };
 
   const handleEdit = (company: Company) => {
@@ -108,13 +144,26 @@ const Companies: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this company?')) {
-      try {
-        await api.companies.delete(id);
-        setCompanies(prev => prev.filter(company => company.id !== id));
-      } catch (error) {
-        console.error('Error deleting company:', error);
-      }
+    if (!confirm('Are you sure you want to delete this company? This will also delete all associated work experience entries.')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // First, update all work experience entries to remove the company reference
+      await api.workExperience.removeCompanyReference(id);
+      
+      // Then delete the company
+      await api.companies.delete(id);
+      
+      setCompanies(prev => prev.filter(company => company.id !== id));
+    } catch (error) {
+      console.error('Error deleting company:', error);
+      setError('Failed to delete company. Please ensure all associated data is removed first.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -124,6 +173,16 @@ const Companies: React.FC = () => {
         company.industry.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : companies;
+
+  if (loading && !companies.length) {
+    return (
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="text-gray-500">Loading companies...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -145,6 +204,12 @@ const Companies: React.FC = () => {
         )}
       </div>
 
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-600">{error}</p>
+        </div>
+      )}
+
       {isAdding ? (
         <Card title={editingCompany ? 'Edit Company' : 'Add New Company'}>
           <form onSubmit={handleSubmit}>
@@ -160,7 +225,7 @@ const Companies: React.FC = () => {
                   required
                 />
               </div>
-
+              
               <div className="flex items-center">
                 <Globe className="text-gray-400 mr-2" size={18} />
                 <Input
@@ -206,14 +271,24 @@ const Companies: React.FC = () => {
 
               <div className="flex items-center">
                 <Calendar className="text-gray-400 mr-2" size={18} />
-                <Input
-                  label="Founded Year"
-                  type="number"
-                  name="founded"
-                  value={formData.founded || ''}
-                  onChange={(e) => handleChange('founded', e.target.value)}
-                  placeholder="e.g., 1990"
-                />
+                <div className="w-full">
+                  <Input
+                    label="Founded Year"
+                    type="number"
+                    name="founded"
+                    value={formData.founded || ''}
+                    onChange={(e) => handleChange('founded', e.target.value)}
+                    placeholder="e.g., 1990"
+                    min="1800"
+                    max={new Date().getFullYear()}
+                    error={foundedError}
+                  />
+                  {!foundedError && (
+                    <p className="mt-1 text-sm text-gray-500">
+                      Leave empty if unknown
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center">
@@ -240,74 +315,39 @@ const Companies: React.FC = () => {
               </div>
 
               <div className="md:col-span-2">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Headquarters</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Location</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center">
                     <MapPin className="text-gray-400 mr-2" size={18} />
                     <Input
                       label="City"
                       name="city"
-                      value={formData.headquarters.city}
+                      value={formData.city}
                       onChange={(e) => handleChange('city', e.target.value)}
                       placeholder="City"
                       required
                     />
                   </div>
                   
-                  <div className="flex items-center">
-                    <MapPin className="text-gray-400 mr-2" size={18} />
-                    <Input
-                      label="State/Province"
-                      name="state"
-                      value={formData.headquarters.state || ''}
-                      onChange={(e) => handleChange('state', e.target.value)}
-                      placeholder="State"
-                    />
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <MapPin className="text-gray-400 mr-2" size={18} />
-                    <Input
-                      label="Country"
-                      name="country"
-                      value={formData.headquarters.country}
-                      onChange={(e) => handleChange('country', e.target.value)}
-                      placeholder="Country"
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Country
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <select
+                      value={formData.country_code}
+                      onChange={(e) => handleChange('country_code', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       required
-                    />
+                    >
+                      <option value="">Select country</option>
+                      {countries.map(country => (
+                        <option key={country.code} value={country.code}>
+                          {country.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                </div>
-              </div>
-
-              <div className="md:col-span-2">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Social Media</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Input
-                    label="LinkedIn"
-                    type="url"
-                    name="linkedin"
-                    value={formData.socialMedia?.linkedin || ''}
-                    onChange={(e) => handleChange('linkedin', e.target.value)}
-                    placeholder="LinkedIn URL"
-                  />
-                  
-                  <Input
-                    label="Twitter"
-                    type="url"
-                    name="twitter"
-                    value={formData.socialMedia?.twitter || ''}
-                    onChange={(e) => handleChange('twitter', e.target.value)}
-                    placeholder="Twitter URL"
-                  />
-                  
-                  <Input
-                    label="Facebook"
-                    type="url"
-                    name="facebook"
-                    value={formData.socialMedia?.facebook || ''}
-                    onChange={(e) => handleChange('facebook', e.target.value)}
-                    placeholder="Facebook URL"
-                  />
                 </div>
               </div>
             </div>
@@ -320,8 +360,11 @@ const Companies: React.FC = () => {
               >
                 Cancel
               </Button>
-              <Button type="submit">
-                {editingCompany ? 'Update Company' : 'Add Company'}
+              <Button 
+                type="submit" 
+                disabled={loading || !!foundedError}
+              >
+                {loading ? 'Saving...' : (editingCompany ? 'Update Company' : 'Add Company')}
               </Button>
             </div>
           </form>
@@ -359,12 +402,12 @@ const Companies: React.FC = () => {
                   
                   <p className="mt-2 text-gray-700 line-clamp-2">{company.description}</p>
                   
-                  <div className="mt-4 flex items-center text-sm text-gray-600">
-                    <MapPin size={16} className="mr-1" />
-                    <span>
-                      {company.headquarters.city}, {company.headquarters.country}
-                    </span>
-                  </div>
+                  {company.city && (
+                    <div className="mt-4 flex items-center text-sm text-gray-600">
+                      <MapPin size={16} className="mr-1" />
+                      <span>{company.city}</span>
+                    </div>
+                  )}
                   
                   {company.website && (
                     <div className="mt-2">
@@ -392,6 +435,7 @@ const Companies: React.FC = () => {
                       variant="danger" 
                       size="sm"
                       onClick={() => handleDelete(company.id)}
+                      disabled={loading}
                     >
                       Delete
                     </Button>

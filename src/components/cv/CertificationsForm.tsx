@@ -3,7 +3,9 @@ import { Certification } from '../../types';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
-import { Calendar, Trash2, Plus, Award, ExternalLink } from 'lucide-react';
+import CompanySelect from '../ui/CompanySelect';
+import SkillSelect from '../ui/SkillSelect';
+import { Calendar, Trash2, Plus, Award, ExternalLink, Code } from 'lucide-react';
 import { generateId } from '../../utils/helpers';
 import { api } from '../../lib/api';
 
@@ -15,11 +17,12 @@ interface CertificationsFormProps {
 
 const emptyCertification: Omit<Certification, 'id'> = {
   name: '',
-  issuingOrganization: '',
   issueDate: '',
   expirationDate: '',
   credentialId: '',
-  credentialURL: ''
+  credentialURL: '',
+  company: undefined,
+  skills: []
 };
 
 const CertificationsForm: React.FC<CertificationsFormProps> = ({ certifications, onSave, cvId }) => {
@@ -59,6 +62,42 @@ const CertificationsForm: React.FC<CertificationsFormProps> = ({ certifications,
     );
   };
 
+  const handleCompanySelect = (index: number, company: Certification['company']) => {
+    setUserCertifications(prev =>
+      prev.map((cert, i) =>
+        i === index
+          ? { ...cert, company }
+          : cert
+      )
+    );
+  };
+
+  const handleSkillSelect = (index: number, skill: Certification['skills'][0]) => {
+    setUserCertifications(prev =>
+      prev.map((cert, i) =>
+        i === index
+          ? {
+              ...cert,
+              skills: [...(cert.skills || []), skill]
+            }
+          : cert
+      )
+    );
+  };
+
+  const handleRemoveSkill = (certIndex: number, skillIndex: number) => {
+    setUserCertifications(prev =>
+      prev.map((cert, i) =>
+        i === certIndex
+          ? {
+              ...cert,
+              skills: cert.skills?.filter((_, sIndex) => sIndex !== skillIndex) || []
+            }
+          : cert
+      )
+    );
+  };
+
   const addCertification = () => {
     setUserCertifications(prev => [
       ...prev,
@@ -77,6 +116,18 @@ const CertificationsForm: React.FC<CertificationsFormProps> = ({ certifications,
       return;
     }
 
+    // Validate all required fields
+    const invalidCertifications = userCertifications.filter(cert => 
+      !cert.name?.trim() ||
+      !cert.issueDate?.trim() ||
+      !cert.company
+    );
+
+    if (invalidCertifications.length > 0) {
+      setError('Please fill in all required fields for all certifications');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -91,17 +142,15 @@ const CertificationsForm: React.FC<CertificationsFormProps> = ({ certifications,
     }
   };
 
-  if (error) {
-    return (
-      <Card title="Certifications">
-        <div className="text-red-600 p-4">{error}</div>
-      </Card>
-    );
-  }
-
   return (
     <Card title="Certifications">
       <form onSubmit={handleSubmit}>
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-700">{error}</p>
+          </div>
+        )}
+
         {userCertifications.map((certification, index) => (
           <div 
             key={certification.id} 
@@ -136,14 +185,16 @@ const CertificationsForm: React.FC<CertificationsFormProps> = ({ certifications,
                 />
               </div>
               
-              <Input
-                label="Issuing Organization"
-                name={`issuingOrganization-${index}`}
-                value={certification.issuingOrganization}
-                onChange={(e) => handleChange(index, 'issuingOrganization', e.target.value)}
-                placeholder="Amazon Web Services"
-                required
-              />
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Issuing Organization
+                  <span className="text-red-500 ml-1">*</span>
+                </label>
+                <CompanySelect
+                  value={certification.company}
+                  onChange={(company) => handleCompanySelect(index, company)}
+                />
+              </div>
               
               <div className="flex items-center">
                 <Calendar className="text-gray-400 mr-2" size={18} />
@@ -186,6 +237,38 @@ const CertificationsForm: React.FC<CertificationsFormProps> = ({ certifications,
                   onChange={(e) => handleChange(index, 'credentialURL', e.target.value)}
                   placeholder="https://www.yourverification.com/cert/123"
                 />
+              </div>
+
+              <div className="md:col-span-2">
+                <div className="flex items-center mb-2">
+                  <Code className="text-gray-400 mr-2" size={18} />
+                  <label className="block text-sm font-medium text-gray-700">
+                    Related Skills
+                  </label>
+                </div>
+                
+                <div className="space-y-2">
+                  {certification.skills?.map((skill, skillIndex) => (
+                    <div key={skill.id} className="flex items-center gap-2">
+                      <div className="flex-1 bg-gray-50 rounded-lg px-3 py-2">
+                        <div className="font-medium text-gray-900">{skill.name}</div>
+                        <div className="text-sm text-gray-500">{skill.domain} • {skill.subdomain}</div>
+                      </div>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => handleRemoveSkill(index, skillIndex)}
+                        icon={<Trash2 size={16} />}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  <SkillSelect
+                    onChange={(skill) => skill && handleSkillSelect(index, skill)}
+                  />
+                </div>
               </div>
             </div>
           </div>
